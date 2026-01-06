@@ -87,7 +87,7 @@ The project follows a decoupled architecture separating the client and server lo
 
 ## Screenshots
 
-| Chat View | Mobile View |
+| Empty Chat State | Active Chat View |
 |-----------|-------------|
 | ![Chat](docs/imgs/Screenshot_20260106_001740.png) | ![Mobile](docs/imgs/Screenshot_20260106_001800.png) |
 
