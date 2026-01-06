@@ -19,6 +19,7 @@ export interface Message {
   created_at: string;
   sender?: User;
   receiver?: User;
+  is_favorite?: boolean;
 }
 
 @Injectable({
@@ -43,5 +44,17 @@ export class ChatService {
 
   getUnreadCount(): Observable<any> {
     return this.http.get(`${this.apiUrl}/unread-count`);
+  }
+
+  deleteMessage(messageId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/messages/${messageId}`);
+  }
+
+  clearConversation(userId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${userId}/clear`, {});
+  }
+
+  toggleFavorite(messageId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/messages/${messageId}/favorite`, {});
   }
 }

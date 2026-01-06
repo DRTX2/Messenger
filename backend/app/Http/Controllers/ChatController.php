@@ -153,6 +153,31 @@ class ChatController extends Controller
     }
 
     /**
+     * Clear conversation metadata/messages
+     */
+    public function clear(Request $request, User $user): JsonResponse
+    {
+        $this->chatService->clearConversation(auth('api')->id(), $user->id);
+        return response()->json(['message' => 'Conversation cleared']);
+    }
+
+    /**
+     * Toggle favorite
+     */
+    public function toggleFavorite(Request $request, Message $message): JsonResponse
+    {
+        try {
+            $updatedMessage = $this->chatService->toggleFavorite($message->id, auth('api')->id());
+            return response()->json([
+                'message' => 'Favorite toggled',
+                'data' => $updatedMessage
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
+
+    /**
      * Delete a message
      *
      * @param Message $message
@@ -161,7 +186,11 @@ class ChatController extends Controller
     public function deleteMessage(Message $message): JsonResponse
     {
         try {
-            $this->chatService->deleteMessage($message->id, auth('api')->id());
+            $deleted = $this->chatService->deleteMessage($message->id, auth('api')->id());
+            
+            if (!$deleted) {
+                return response()->json(['message' => 'Unauthorized or message not found'], 403);
+            }
 
             return response()->json([
                 'success' => true,

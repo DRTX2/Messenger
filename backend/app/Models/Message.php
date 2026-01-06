@@ -16,12 +16,14 @@ class Message extends Model
         'receiver_id',
         'content',
         'read_at',
+        'is_favorite',
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'is_favorite' => 'boolean',
     ];
 
     /**

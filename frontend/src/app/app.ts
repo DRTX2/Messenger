@@ -1,4 +1,4 @@
-import { Component, signal, computed, effect, inject } from '@angular/core';
+import { Component, signal, computed, effect, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
@@ -148,6 +148,13 @@ export class App {
     this.loadMessages(id);
   }
 
+  @HostListener('document:keydown.escape')
+  onKeydownHandler() {
+    if (this.selectedConversationId()) {
+      this.closeChat();
+    }
+  }
+
   loadMessages(userId: string) {
       this.chatService.getMessages(+userId).subscribe({
           next: (res: any) => {
@@ -158,7 +165,8 @@ export class App {
                       senderId: m.sender_id === this.currentUser().id ? 'me' : m.sender_id.toString(),
                       text: m.content,
                       timestamp: m.created_at,
-                      isRead: !!m.read_at
+                      isRead: !!m.read_at,
+                      isFavorite: !!m.is_favorite
                   }));
                   this.currentMessages.set(msgs);
               }
@@ -181,6 +189,43 @@ export class App {
             }
         }
     });
+  }
+  
+  clearChat() {
+      const conversationId = this.selectedConversationId();
+      if (!conversationId) return;
+
+      if (confirm('Are you sure you want to clear this conversation? This cannot be undone.')) {
+          this.chatService.clearConversation(+conversationId).subscribe({
+              next: () => {
+                  this.currentMessages.set([]);
+                  this.loadUsers();
+              }
+          });
+      }
+  }
+
+  deleteMessage(messageId: number) {
+      if (confirm('Delete this message?')) {
+          this.chatService.deleteMessage(messageId).subscribe({
+              next: () => {
+                  this.currentMessages.update(msgs => msgs.filter(m => m.id !== messageId));
+              }
+          });
+      }
+  }
+
+  toggleFavorite(message: any) {
+      this.chatService.toggleFavorite(message.id).subscribe({
+          next: () => {
+              this.currentMessages.update(msgs => msgs.map(m => {
+                  if (m.id === message.id) {
+                      return { ...m, isFavorite: !m.isFavorite };
+                  }
+                  return m;
+              }));
+          }
+      });
   }
 
   closeChat() {

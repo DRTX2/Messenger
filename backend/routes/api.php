@@ -17,8 +17,14 @@ Route::middleware('auth:api')->group(function(){
     Route::prefix('chat')->group(function () {
         Route::get('/', [ChatController::class, 'users']);
         Route::get('/unread-count', [ChatController::class, 'unreadCount']);
+        
+        // Specific message actions
+        Route::post('/messages/{message}/favorite', [ChatController::class, 'toggleFavorite']);
+        Route::delete('/messages/{message}', [ChatController::class, 'deleteMessage']);
+        
+        // User-specific actions
+        Route::post('/{user}/clear', [ChatController::class, 'clear']);
         Route::get('/{user}', [ChatController::class, 'messages']);
         Route::post('/{user}', [ChatController::class, 'send']);
-        Route::delete('/{message}', [ChatController::class, 'deleteMessage']);
     });
 });

@@ -149,4 +149,45 @@ class ChatService
 
         return $message->delete();
     }
+
+    /**
+     * Clear all messages in a conversation
+     *
+     * @param int $authUserId
+     * @param int $otherUserId
+     * @return bool
+     */
+    public function clearConversation(int $authUserId, int $otherUserId): bool
+    {
+        return Message::where(function ($query) use ($authUserId, $otherUserId) {
+            $query->where('sender_id', $authUserId)->where('receiver_id', $otherUserId);
+        })->orWhere(function ($query) use ($authUserId, $otherUserId) {
+            $query->where('sender_id', $otherUserId)->where('receiver_id', $authUserId);
+        })->delete();
+    }
+
+    /**
+     * Toggle favorite status of a message
+     *
+     * @param int $messageId
+     * @param int $userId
+     * @return Message
+     */
+    public function toggleFavorite(int $messageId, int $userId): Message
+    {
+        $message = Message::find($messageId);
+
+        if (!$message) {
+            throw new \Exception('Message not found', 404);
+        }
+
+        if ($message->sender_id !== $userId && $message->receiver_id !== $userId) {
+            throw new \Exception('Unauthorized', 403);
+        }
+
+        $message->is_favorite = !$message->is_favorite;
+        $message->save();
+
+        return $message;
+    }
 }
