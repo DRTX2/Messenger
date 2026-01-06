@@ -13,7 +13,12 @@ Route::middleware('auth:api')->group(function(){
     Route::post('/refresh', [AuthController::class, 'refresh']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    Route::get('/chat', [ChatController::class, 'users']);
-    Route::get('/chat/{user}', [ChatController::class, 'messages']);
-    Route::post('/chat/{user}', [ChatController::class, 'send']);
+    // Chat routes
+    Route::prefix('chat')->group(function () {
+        Route::get('/', [ChatController::class, 'users']);
+        Route::get('/unread-count', [ChatController::class, 'unreadCount']);
+        Route::get('/{user}', [ChatController::class, 'messages']);
+        Route::post('/{user}', [ChatController::class, 'send']);
+        Route::delete('/{message}', [ChatController::class, 'deleteMessage']);
+    });
 });
