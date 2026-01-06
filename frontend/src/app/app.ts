@@ -1,32 +1,28 @@
-import { Component, signal, computed, effect } from '@angular/core';
+import { Component, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
-
-interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  status: 'online' | 'offline' | 'away';
-  lastSeen?: string;
-}
-
-interface Message {
-  id: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
-  isRead: boolean;
-  type: 'text' | 'image' | 'file';
-  attachmentUrl?: string;
-}
+import { AuthService } from './services/auth.service';
+import { ChatService, User, Message } from './services/chat.service';
 
 interface Conversation {
-  id: string;
-  user: User;
-  lastMessage: Message;
+  id: string; // user id as string for tracking
+  user: {
+      id: string;
+      name: string;
+      avatar: string;
+      status: 'online' | 'offline' | 'away';
+      lastSeen?: string;
+  };
+  lastMessage: {
+      text: string;
+      timestamp: Date;
+      isRead: boolean;
+      senderId: string;
+  };
   unreadCount: number;
 }
+
 
 @Component({
   selector: 'app-root',
@@ -36,95 +32,155 @@ interface Conversation {
   styleUrl: './app.css'
 })
 export class App {
-  currentUser: User = {
-    id: 'me',
-    name: 'David',
-    avatar: 'https://i.pravatar.cc/150?u=me',
-    status: 'online'
-  };
+  authService = inject(AuthService);
+  chatService = inject(ChatService);
 
-  // Mock Conversations
-  conversations = signal<Conversation[]>([
-    {
-      id: '1',
-      user: { id: 'u1', name: 'Alice Freeman', avatar: 'https://i.pravatar.cc/150?u=1', status: 'online' },
-      lastMessage: { id: 'm1', senderId: 'u1', text: 'Hey! Are we still on for the meeting?', timestamp: new Date(Date.now() - 1000 * 60 * 5), isRead: false, type: 'text' },
-      unreadCount: 2
-    },
-    {
-      id: '2',
-      user: { id: 'u2', name: 'Bob Smith', avatar: 'https://i.pravatar.cc/150?u=2', status: 'offline', lastSeen: '2h ago' },
-      lastMessage: { id: 'm2', senderId: 'me', text: 'I sent you the files.', timestamp: new Date(Date.now() - 1000 * 60 * 60), isRead: true, type: 'text' },
-      unreadCount: 0
-    },
-    {
-      id: '3',
-      user: { id: 'u3', name: 'Charlie Kim', avatar: 'https://i.pravatar.cc/150?u=3', status: 'away' },
-      lastMessage: { id: 'm3', senderId: 'u3', text: 'Thanks for the update!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), isRead: true, type: 'text' },
-      unreadCount: 0
-    },
-     {
-      id: '4',
-      user: { id: 'u4', name: 'Diana Prince', avatar: 'https://i.pravatar.cc/150?u=4', status: 'online' },
-      lastMessage: { id: 'm4', senderId: 'me', text: 'Can you check the latest designs?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), isRead: true, type: 'text' },
-      unreadCount: 0
-    }
-  ]);
+  // Login State
+  email = signal('');
+  password = signal('');
+  loginError = signal('');
+  isRegistering = signal(false);
+  name = signal(''); // For registration
 
-  selectedConversationId = signal<string | null>('1');
+  currentUser = this.authService.currentUser;
+  
+  // Chat State
+  users = signal<any[]>([]);
+  conversations = computed(() => {
+    // Transform backend users to conversation format
+    return this.users().map(u => ({
+      id: u.id.toString(),
+      user: {
+        id: u.id.toString(),
+        name: u.name,
+        avatar: u.avatar || `https://ui-avatars.com/api/?name=${u.name}&background=random`,
+        status: 'offline', // Default for now
+        lastSeen: ''
+      },
+      lastMessage: {
+        text: u.unread_messages > 0 ? `${u.unread_messages} unread messages` : 'Start a conversation',
+        timestamp: new Date(u.created_at), // Placeholder
+        isRead: u.unread_messages === 0,
+        senderId: 'unknown'
+      },
+      unreadCount: u.unread_messages || 0
+    }));
+  });
 
-  // Mock Messages for the selected conversation
-  // In a real app, this would fetch from backend based on selectedConversationId
-  currentMessages = signal<Message[]>([
-    { id: 'msg1', senderId: 'u1', text: 'Hi David, how is it going?', timestamp: new Date(Date.now() - 1000 * 60 * 60), isRead: true, type: 'text' },
-    { id: 'msg2', senderId: 'me', text: 'Pretty good! Working on the new frontend.', timestamp: new Date(Date.now() - 1000 * 60 * 55), isRead: true, type: 'text' },
-    { id: 'msg3', senderId: 'u1', text: 'That sounds exciting! I wanted to ask about the timeline.', timestamp: new Date(Date.now() - 1000 * 60 * 10), isRead: true, type: 'text' },
-    { id: 'msg4', senderId: 'u1', text: 'Hey! Are we still on for the meeting?', timestamp: new Date(Date.now() - 1000 * 60 * 5), isRead: false, type: 'text' }
-  ]);
-
+  selectedConversationId = signal<string | null>(null);
+  currentMessages = signal<any[]>([]);
   messageInput = signal('');
 
   selectedConversation = computed(() => 
     this.conversations().find(c => c.id === this.selectedConversationId())
   );
 
-  constructor() {}
+  constructor() {
+    // Reload users when user logs in
+    effect(() => {
+      if (this.currentUser()) {
+        this.loadUsers();
+      }
+    });
+
+    // Auto-refresh messages every 5 seconds if a chat is open
+    // In a real app, use WebSockets (Pusher/Laravel Echo)
+    effect((onCleanup) => {
+        const conversationId = this.selectedConversationId();
+        if (conversationId) {
+            const interval = setInterval(() => {
+                this.loadMessages(conversationId);
+            }, 3000);
+            onCleanup(() => clearInterval(interval));
+        }
+    });
+  }
+
+  doLogin() {
+    this.loginError.set('');
+    this.authService.login({ email: this.email(), password: this.password() })
+      .subscribe({
+        next: () => {
+          this.loadUsers();
+        },
+        error: (err) => {
+          this.loginError.set('Invalid credentials');
+          console.error(err);
+        }
+      });
+  }
+
+  doRegister() {
+    this.loginError.set('');
+    this.authService.register({ 
+        name: this.name(),
+        email: this.email(), 
+        password: this.password(),
+        password_confirmation: this.password() 
+    }).subscribe({
+        next: () => {
+            // Auto login after register
+            this.doLogin();
+        },
+        error: (err) => {
+             this.loginError.set(err.error.message || 'Registration failed');
+        }
+    });
+  }
+
+  logout() {
+    this.authService.logout();
+    this.selectedConversationId.set(null);
+  }
+
+  loadUsers() {
+    this.chatService.getUsers().subscribe({
+      next: (res: any) => {
+        if (res.success) {
+          this.users.set(res.data);
+        }
+      }
+    });
+  }
 
   selectConversation(id: string) {
     this.selectedConversationId.set(id);
-    // Here we would fetch messages for this conversation
-    // For demo, we just shuffle or keep the same mock messages
-    // but simplified not to overengineer the mock.
+    this.loadMessages(id);
+  }
+
+  loadMessages(userId: string) {
+      this.chatService.getMessages(+userId).subscribe({
+          next: (res: any) => {
+              if (res.success) {
+                  // Transform messages to UI format
+                  const msgs = res.data.map((m: any) => ({
+                      id: m.id,
+                      senderId: m.sender_id === this.currentUser().id ? 'me' : m.sender_id.toString(),
+                      text: m.content,
+                      timestamp: m.created_at,
+                      isRead: !!m.read_at
+                  }));
+                  this.currentMessages.set(msgs);
+              }
+          }
+      });
   }
 
   sendMessage() {
     const text = this.messageInput();
-    if (!text.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: 'me',
-      text: text,
-      timestamp: new Date(),
-      isRead: false,
-      type: 'text'
-    };
-
-    this.currentMessages.update(msgs => [...msgs, newMessage]);
-    this.messageInput.set('');
+    const conversationId = this.selectedConversationId();
     
-    // Simulate reply
-    setTimeout(() => {
-        const reply: Message = {
-            id: (Date.now() + 1).toString(),
-            senderId: this.selectedConversation()?.user.id || 'unknown',
-            text: 'That is great! I will take a look.',
-            timestamp: new Date(),
-            isRead: false,
-            type: 'text'
-        };
-        this.currentMessages.update(msgs => [...msgs, reply]);
-    }, 2000);
+    if (!text.trim() || !conversationId) return;
+
+    this.chatService.sendMessage(+conversationId, text).subscribe({
+        next: (res: any) => {
+            if (res.success) {
+                this.messageInput.set('');
+                this.loadMessages(conversationId); // Refresh to see new message
+                this.loadUsers(); // Refresh sidebar to update order or snippets
+            }
+        }
+    });
   }
 
   closeChat() {
