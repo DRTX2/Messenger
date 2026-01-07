@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\User;
 use App\Models\Message;
-use Illuminate\Database\Eloquent\Collection;
+use App\Exceptions\BusinessException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -12,10 +15,6 @@ class ChatService
 {
     /**
      * Get all users except the authenticated user
-     *
-     * @param int $userId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getUsers(int $userId, int $perPage = 10): LengthAwarePaginator
     {
@@ -33,22 +32,17 @@ class ChatService
 
     /**
      * Get conversation between two users with pagination
-     *
-     * @param int $authUserId
-     * @param int $otherUserId
-     * @param int $perPage
-     * @return LengthAwarePaginator
      */
     public function getConversation(int $authUserId, int $otherUserId, int $perPage = 20): LengthAwarePaginator
     {
-        // Validate that other user exists
-        if (!User::find($otherUserId)) {
-            throw new \Exception('User not found', 404);
+        $userExists = User::where('id', $otherUserId)->exists();
+        
+        if (!$userExists) {
+            throw new BusinessException('User not found', 404);
         }
 
-        // Prevent accessing same user
         if ($authUserId === $otherUserId) {
-            throw new \Exception('Cannot chat with yourself', 400);
+            throw new BusinessException('Cannot chat with yourself', 400);
         }
 
         return Message::query()
@@ -67,25 +61,17 @@ class ChatService
 
     /**
      * Send a message from one user to another
-     *
-     * @param int $senderId
-     * @param int $receiverId
-     * @param string $content
-     * @return Message
      */
     public function sendMessage(int $senderId, int $receiverId, string $content): Message
     {
-        // Validate that receiver exists
-        if (!User::find($receiverId)) {
-            throw new \Exception('Recipient not found', 404);
+        if (!User::where('id', $receiverId)->exists()) {
+            throw new BusinessException('Recipient not found', 404);
         }
 
-        // Prevent sending messages to yourself
         if ($senderId === $receiverId) {
-            throw new \Exception('Cannot send messages to yourself', 400);
+            throw new BusinessException('Cannot send messages to yourself', 400);
         }
 
-        // Use transaction to ensure data consistency
         return DB::transaction(function () use ($senderId, $receiverId, $content) {
             $message = Message::create([
                 'sender_id' => $senderId,
@@ -93,17 +79,12 @@ class ChatService
                 'content' => $content,
             ]);
 
-            // Load relationships for response
             return $message->load(['sender:id,name,email', 'receiver:id,name,email']);
         });
     }
 
     /**
      * Mark messages as read
-     *
-     * @param int $authUserId
-     * @param int $otherUserId
-     * @return void
      */
     public function markAsRead(int $authUserId, int $otherUserId): void
     {
@@ -116,9 +97,6 @@ class ChatService
 
     /**
      * Get unread message count for a user
-     *
-     * @param int $userId
-     * @return int
      */
     public function getUnreadCount(int $userId): int
     {
@@ -130,36 +108,28 @@ class ChatService
 
     /**
      * Delete a message (only the sender can delete)
-     *
-     * @param int $messageId
-     * @param int $userId
-     * @return bool
      */
     public function deleteMessage(int $messageId, int $userId): bool
     {
         $message = Message::find($messageId);
 
         if (!$message) {
-            throw new \Exception('Message not found', 404);
+            throw new BusinessException('Message not found', 404);
         }
 
         if ($message->sender_id !== $userId) {
-            throw new \Exception('Unauthorized to delete this message', 403);
+            throw new BusinessException('Unauthorized to delete this message', 403);
         }
 
-        return $message->delete();
+        return (bool) $message->delete();
     }
 
     /**
      * Clear all messages in a conversation
-     *
-     * @param int $authUserId
-     * @param int $otherUserId
-     * @return bool
      */
     public function clearConversation(int $authUserId, int $otherUserId): bool
     {
-        return Message::where(function ($query) use ($authUserId, $otherUserId) {
+        return (bool) Message::where(function ($query) use ($authUserId, $otherUserId) {
             $query->where('sender_id', $authUserId)->where('receiver_id', $otherUserId);
         })->orWhere(function ($query) use ($authUserId, $otherUserId) {
             $query->where('sender_id', $otherUserId)->where('receiver_id', $authUserId);
@@ -168,21 +138,17 @@ class ChatService
 
     /**
      * Toggle favorite status of a message
-     *
-     * @param int $messageId
-     * @param int $userId
-     * @return Message
      */
     public function toggleFavorite(int $messageId, int $userId): Message
     {
         $message = Message::find($messageId);
 
         if (!$message) {
-            throw new \Exception('Message not found', 404);
+            throw new BusinessException('Message not found', 404);
         }
 
         if ($message->sender_id !== $userId && $message->receiver_id !== $userId) {
-            throw new \Exception('Unauthorized', 403);
+            throw new BusinessException('Unauthorized', 403);
         }
 
         $message->is_favorite = !$message->is_favorite;
