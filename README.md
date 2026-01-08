@@ -1,105 +1,127 @@
 # Nexus Messenger - Enterprise Edition
 
-An advanced real-time messaging application built with **Angular 19** and **Laravel 12** with native WebSocket support.
+![Nexus Banner](docs/imgs/Screenshot_20260106_001740.png)
 
-![Dashboard](docs/imgs/Screenshot_20260106_001740.png)
+> **A next-generation real-time messaging platform engineered for performance, scalability, and seamless user experience.**
 
-## 🚀 Description
+Nexus Messenger is a full-stack enterprise communication solution that bridges the gap between modern design and robust backend architecture. Built with the bleeding-edge **Angular 21** and **Laravel 12**, it delivers sub-millisecond real-time interactions via native WebSockets.
 
-Nexus is a professional full-stack messaging platform designed for high-performance team communication. It features a stunning, premium UI with real-time synchronization, secure authentication, and a scalable microservices-ready architecture.
+---
+
+## 🛠️ Tech Stack & Tools
+
+We utilize a cutting-edge technology stack to ensure scalability, security, and developer productivity.
+
+### **Frontend (Client)**
+*   **Framework**: [Angular 21](https://angular.io/) - Utilizing the latest Signals-based reactive architecture.
+*   **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) - High-performance utility-first CSS utilizing the new engine.
+*   **Real-time Client**: `laravel-echo` + `pusher-js` - For seamless WebSocket event listening.
+*   **State Management**: RxJS + Angular Signals.
+*   **Testing**: [Vitest](https://vitest.dev/) - Blazing fast unit testing.
+
+### **Backend (API)**
+*   **Core Framework**: [Laravel 12](https://laravel.com/) - The PHP framework for web artisans.
+*   **Real-time Server**: [Laravel Reverb](https://laravel.com/docs/reverb) - First-party WebSocket server for extreme operational scale.
+*   **Authentication**: [JWT Auth](https://github.com/PHP-Open-Source-Saver/jwt-auth) - Stateless, secure token-based authentication.
+*   **Testing**: [Pest PHP](https://pestphp.com/) - Elegant testing framework.
+*   **Code Quality**: Laravel Pint (Style) & Laravel Pail (Logs).
+
+### **Infrastructure & DevOps**
+*   **Containerization**: Docker & Docker Compose.
+*   **Web Server**: Nginx (Production-ready configuration).
+*   **Database**: PostgreSQL - Reliable, ACID-compliant relational data storage.
+*   **Asset Bundling**: Vite - Next-generation frontend tooling.
+
+---
 
 ## ✨ Key Features
 
--   **⚡ Real-time Communication**: Native WebSocket integration using **Laravel Reverb** for instant message delivery and typing indicators.
--   **📁 Enterprise File Sharing**: Support for multiple file attachments with a sleek glassmorphism design and image previews.
--   **👥 Group Messaging**: Create and manage group conversations seamlessly.
--   **🔐 Robust Authentication**: JWT-based security with automatic token management and protected routing.
--   **⭐ Message Experience**:
-    *   **Favorite Messages**: Star important content for quick reference.
-    *   **Auto-scroll**: Intelligent scrolling that keeps you at the latest message.
-    *   **Custom Scrollbars**: Minimalist, non-intrusive design for a premium feel.
-    *   **Message Actions**: Delete messages or clear entire chats with one click.
--   **🎨 Premium UI/UX**: Built with Tailwind CSS v4, featuring a modern dark mode, smooth transitions, and a mobile-first responsive layout.
+Nexus isn't just a chat app; it's a complete communication suite.
 
-## 🏗️ Architecture
+*   **⚡ Instant Messaging**: Native WebSocket integration creates a "live" feel with zero latency.
+*   **👥 Group Implementation**: Robust many-to-many relationship handling for scalable group chats.
+*   **📁 Enterprise File Sharing**: Drag-and-drop uploads for images and documents with glassmorphic previews.
+*   **🔐 Military-Grade Auth**: Full JWT implementation with intercepted HTTP requests and auto-refresh mechanisms.
+*   **🧠 Smart UI/UX**:
+    *   **Auto-Scroll**: Intelligent viewport management keeps you in the conversation.
+    *   **Micro-Interactions**: Smooth transitions and hover effects using vanilla CSS & Tailwind.
+    *   **Dark Mode**: A deeply integrated, eye-friendly dark theme.
 
-### Frontend
--   **Framework**: Angular 19+ (Signals-based reactive state).
--   **Styling**: Tailwind CSS v4 + Vanilla CSS for custom animations.
--   **Communication**: RxJS for asynchronous flows and WebSocketService for real-time events.
--   **Features**: Modular architecture by features (Chat, Auth, Shared).
+---
 
-### Backend
--   **Framework**: Laravel 12.
--   **Real-time Server**: Laravel Reverb (WebSockets).
--   **Database**: PostgreSQL.
--   **Auth**: JWT (JSON Web Tokens) with standard API protection.
--   **DX Tools**: Custom Artisan commands for full-stack development.
+## 🏗️ Architecture Overview
 
-## 🛠️ Installation
+The system follows a **Service-Oriented Architecture (SOA)** approach:
+
+1.  **Client Layer**: Angular SPA serving as the presentation layer, consuming REST APIs and listening to WebSocket channels.
+2.  **API Layer**: Laravel REST API handling business logic, validation, and persistence.
+3.  **Real-time Layer**: Laravel Reverb server broadcasting events (Messages, Presence, Typing) directly to clients.
+4.  **Data Layer**: PostgreSQL storing relational data (Users, Conversations, Messages, Attachments).
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
--   Docker & Docker Compose
--   Or manually: PHP 8.2+, Node.js 20+, PostgreSQL.
+*   **Docker Desktop** (Recommended)
+*   *Or for manual runs:* PHP 8.2+, Node.js 20+, PostgreSQL 16+
 
-### Using Docker (Recommended)
+### 🐳 Quick Start (Docker)
 
-1.  **Clone & Start:**
-    ```bash
-    git clone https://github.com/yourusername/messenger.git
-    cd messenger
-    docker-compose up -d --build
-    ```
+Get the entire stack running in under 2 minutes.
 
-2.  **Setup Backend:**
-    ```bash
-    docker-compose exec backend composer install
-    docker-compose exec backend php artisan migrate
-    docker-compose exec backend php artisan jwt:secret
-    ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/messenger.git
+cd messenger
 
-### Manual Installation (Development)
+# 2. Start services (Background mode)
+docker-compose up -d --build
 
-#### 1. Backend Setup
+# 3. Initialize Backend (First time only)
+docker-compose exec backend composer install
+docker-compose exec backend php artisan migrate --seed
+docker-compose exec backend php artisan jwt:secret
+```
+
+Access the application:
+*   **Frontend**: `http://localhost:4200`
+*   **Backend API**: `http://localhost:8000`
+*   **Reverb Console**: `http://localhost:8080`
+
+### 🔧 Manual Development Setup
+
+If you prefer running services locally on metal:
+
+**Backend:**
 ```bash
 cd backend
 composer install
-cp .env.example .env # Configure your DB
+cp .env.example .env
+# Update .env with your local DB credentials
 php artisan key:generate
 php artisan migrate
+php artisan serve:all # Runs API + Reverb + Queue
 ```
 
-#### 2. Frontend Setup
+**Frontend:**
 ```bash
 cd frontend
 npm install
+npm start # Runs on port 4200
 ```
 
-#### 3. Run Everything
-We've made development easier with a single command that starts both the API and WebSockets:
-```bash
-cd backend
-php artisan serve:all
-```
-Then, in another terminal:
-```bash
-cd frontend
-npm start
-```
+---
 
-## 📸 Screenshots
+## 📸 Visual Tour
 
-| Empty Chat State | Active Chat View |
-|-----------|-------------|
-| ![Chat](docs/imgs/Screenshot_20260106_001740.png) | ![Mobile](docs/imgs/Screenshot_20260106_001800.png) |
+| **Zero State** | **Active Conversation** |
+|:---:|:---:|
+| ![Empty State](docs/imgs/Screenshot_20260106_001740.png) | ![Mobile View](docs/imgs/Screenshot_20260106_001800.png) |
+| *Clean, distraction-free startup* | *Responsive mobile layout with attachments* |
 
-## 🚀 Recent Improvements (Jan 2026)
--   ✅ **Transition to WebSockets**: Migrated from polling to **Laravel Reverb**.
--   ✅ **Enterprise Logic**: Added `Attachments` and `Conversations` models for complex data structures.
--   ✅ **UI Polishing**: Implemented custom scrollbars, auto-scroll logic, and fixed navigation artifacts.
--   ✅ **DX Commands**: Added `php artisan serve:all` to orchestrate multi-server development.
+---
 
-## 🛠️ Development Tools
+## 📜 License
 
--   **Frontend-only**: `docker-compose -f docker-compose.frontend.yml up`
--   **Backend-only**: `docker-compose -f docker-compose.backend.yml up`
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
