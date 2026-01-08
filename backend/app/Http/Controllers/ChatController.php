@@ -29,7 +29,8 @@ class ChatController extends Controller
         
         $users = $this->chatService->getUsers(
             (int) auth()->id(),
-            min($perPage, 50)
+            min($perPage, 50),
+            $request->input('search')
         );
 
         return UserResource::collection($users)->additional(['success' => true]);
@@ -61,7 +62,8 @@ class ChatController extends Controller
         $message = $this->chatService->sendMessage(
             (int) auth()->id(),
             $user->id,
-            $request->validated('message')
+            (string) $request->validated('message', ''), // Default to empty string if null
+            $request->validated('attachment_ids', [])
         );
 
         return response()->json([

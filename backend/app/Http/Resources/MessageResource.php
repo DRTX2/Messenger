@@ -18,6 +18,7 @@ class MessageResource extends JsonResource
             'receiver_id' => $this->receiver_id,
             'sender' => new UserResource($this->whenLoaded('sender')),
             'receiver' => new UserResource($this->whenLoaded('receiver')),
+            'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
             'read_at' => $this->read_at,
             'is_read' => $this->read_at !== null,
             'is_favorite' => (bool) $this->is_favorite,
