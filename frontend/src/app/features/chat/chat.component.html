@@ -1,0 +1,90 @@
+<div class="flex h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans">
+  
+  <!-- Sidebar -->
+  <app-chat-sidebar
+    [class]="selectedConversationId() ? 'hidden md:flex' : 'flex'"
+    [conversations]="conversations()"
+    [selectedId]="selectedConversationId()"
+    [currentUserName]="currentUser()?.name || 'User'"
+    [searchQuery]="searchQuery()"
+    [isSearching]="isSearching()"
+    (conversationSelected)="selectConversation($event)"
+    (searchChanged)="searchQuery.set($event)"
+    (searchSubmitted)="doSearch()"
+    (createGroupClicked)="showGroupModal.set(true)"
+    (logoutClicked)="onLogout()">
+  </app-chat-sidebar>
+
+  <!-- Main Chat Area -->
+  <main 
+    class="flex-1 flex flex-col bg-white dark:bg-zinc-950 relative overflow-hidden"
+    [class]="selectedConversationId() ? 'flex' : 'hidden md:flex'">
+    
+    @if (selectedConversation(); as conversation) {
+      <!-- Chat Header -->
+      <app-chat-header
+        [conversation]="conversation"
+        (backClicked)="closeChat()"
+        (clearClicked)="onClearChat()"
+        (leaveGroupClicked)="onLeaveGroup()">
+      </app-chat-header>
+
+      <!-- Message List -->
+      <app-message-list
+        class="flex-1 overflow-hidden flex flex-col"
+        [messages]="currentMessages()"
+        [otherUserAvatar]="conversation.user.avatar"
+        (toggleFavorite)="onToggleFavorite($event)"
+        (deleteMessage)="onDeleteMessage($event)">
+      </app-message-list>
+
+      <!-- Typing Indicator -->
+      @if (typingIndicatorText()) {
+        <div class="px-6 py-2 flex items-center gap-2 text-sm text-zinc-500 animate-pulse">
+          <div class="flex gap-1">
+            <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+          </div>
+          <span>{{ typingIndicatorText() }}</span>
+        </div>
+      }
+
+      <!-- Message Input -->
+      <app-message-input
+        [messageText]="messageText()"
+        [pendingAttachments]="pendingAttachments()"
+        [isUploading]="isUploading()"
+        [isSending]="isSending()"
+        (messageTextChange)="messageText.set($event); onTyping()"
+        (sendMessage)="onSendMessage(); onStopTyping()"
+        (fileSelected)="onFileSelected($event)"
+        (removeAttachment)="onRemoveAttachment($event)">
+      </app-message-input>
+
+    } @else {
+      <!-- Empty State -->
+      <div class="h-full w-full flex flex-col items-center justify-center text-center p-8 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+        <div class="w-32 h-32 bg-indigo-50 dark:bg-zinc-900 rounded-full flex items-center justify-center mb-6 ring-8 ring-indigo-50/50 dark:ring-zinc-900/50">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-indigo-200 dark:text-zinc-700">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+          Welcome, {{ currentUser()?.name || 'User' }}
+        </h2>
+        <p class="text-zinc-500 max-w-sm">
+          Select a conversation from the sidebar to start messaging.
+        </p>
+      </div>
+    }
+  </main>
+</div>
+
+<!-- Group Creation Modal -->
+@if (showGroupModal()) {
+  <app-create-group-modal
+    (close)="showGroupModal.set(false)"
+    (groupCreated)="onGroupCreated()">
+  </app-create-group-modal>
+}
