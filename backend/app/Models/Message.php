@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Message extends Model
 {
@@ -12,9 +15,13 @@ class Message extends Model
     use HasFactory;
 
     protected $fillable = [
+        'conversation_id',
         'sender_id',
-        'receiver_id',
+        'receiver_id', // Deprecated but kept for backward compat if needed
         'content',
+        'type',
+        'metadata',
+        'parent_id',
         'read_at',
         'is_favorite',
     ];
@@ -24,33 +31,40 @@ class Message extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'is_favorite' => 'boolean',
+        'metadata' => 'array',
     ];
 
-    /**
-     * Get the sender of the message
-     *
-     * @return BelongsTo
-     */
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
     }
 
-    /**
-     * Get the receiver of the message
-     *
-     * @return BelongsTo
-     */
+    // Deprecated for direct DM, but kept for legacy
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'receiver_id');
     }
 
-    /**
-     * Check if message has been read
-     *
-     * @return bool
-     */
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Message::class, 'parent_id');
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MessageReaction::class); // User will need to create this model too if strictly following
+    }
+
     public function isRead(): bool
     {
         return $this->read_at !== null;

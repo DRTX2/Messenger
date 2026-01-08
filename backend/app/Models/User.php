@@ -60,6 +60,13 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Message::class, 'receiver_id');
     }
 
+    public function conversations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')
+            ->withPivot(['is_admin', 'formatted_last_read_at'])
+            ->withTimestamps();
+    }
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
