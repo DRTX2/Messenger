@@ -1,45 +1,42 @@
-# Messenger Project
+# Nexus Messenger - Enterprise Edition
 
-An advanced real-time messaging application built with Angular and Laravel (PostgreSQL).
+An advanced real-time messaging application built with **Angular 19** and **Laravel 12** with native WebSocket support.
 
 ![Dashboard](docs/imgs/Screenshot_20260106_001740.png)
 
-## Description
+## 🚀 Description
 
-This project is a full-stack messaging platform that enables users to communicate in real-time. It features a modern, responsive UI inspired by top-tier messaging apps, complete with authentication, secure API communication, and dynamic interactions.
+Nexus is a professional full-stack messaging platform designed for high-performance team communication. It features a stunning, premium UI with real-time synchronization, secure authentication, and a scalable microservices-ready architecture.
 
-## Features
+## ✨ Key Features
 
--   **Authentication**: Secure Login and Registration using JWT (JSON Web Tokens).
--   **Conversation List**: View all available users and recent message snippets.
--   **Real-time Chat**: Send and receive messages instantly (polling mechanism currently, expandable to WebSockets).
--   **Message Management**:
-    -   Delete specific messages.
-    -   Clear entire conversations.
-    -   Mark messages as "Favorite" (starred).
--   **User Presence**: Simulated Online/Offline status.
--   **Responsive Design**: Mobile-first approach using Tailwind CSS.
--   **Keyboard Shortcuts**: Press `ESC` to close the active chat.
+-   **⚡ Real-time Communication**: Native WebSocket integration using **Laravel Reverb** for instant message delivery and typing indicators.
+-   **📁 Enterprise File Sharing**: Support for multiple file attachments with a sleek glassmorphism design and image previews.
+-   **👥 Group Messaging**: Create and manage group conversations seamlessly.
+-   **🔐 Robust Authentication**: JWT-based security with automatic token management and protected routing.
+-   **⭐ Message Experience**:
+    *   **Favorite Messages**: Star important content for quick reference.
+    *   **Auto-scroll**: Intelligent scrolling that keeps you at the latest message.
+    *   **Custom Scrollbars**: Minimalist, non-intrusive design for a premium feel.
+    *   **Message Actions**: Delete messages or clear entire chats with one click.
+-   **🎨 Premium UI/UX**: Built with Tailwind CSS v4, featuring a modern dark mode, smooth transitions, and a mobile-first responsive layout.
 
-## Architecture
-
-The project follows a decoupled architecture separating the client and server logic:
+## 🏗️ Architecture
 
 ### Frontend
--   **Framework**: Angular 19+ (Signals for state management).
--   **Styling**: Tailwind CSS v4.
--   **HTTP Client**: Angular `HttpClient` with Interceptors for JWT handling.
--   **Structure**:
-    -   `AuthService`: Manages user sessions.
-    -   `ChatService`: API interaction for messages and users.
+-   **Framework**: Angular 19+ (Signals-based reactive state).
+-   **Styling**: Tailwind CSS v4 + Vanilla CSS for custom animations.
+-   **Communication**: RxJS for asynchronous flows and WebSocketService for real-time events.
+-   **Features**: Modular architecture by features (Chat, Auth, Shared).
 
 ### Backend
--   **Framework**: Laravel 11.
+-   **Framework**: Laravel 12.
+-   **Real-time Server**: Laravel Reverb (WebSockets).
 -   **Database**: PostgreSQL.
--   **Authentication**: `laravel/sanctum` and `php-open-source-saver/jwt-auth`.
--   **API**: RESTful endpoints for Chat and Auth.
+-   **Auth**: JWT (JSON Web Tokens) with standard API protection.
+-   **DX Tools**: Custom Artisan commands for full-stack development.
 
-## Installation
+## 🛠️ Installation
 
 ### Prerequisites
 -   Docker & Docker Compose
@@ -47,51 +44,62 @@ The project follows a decoupled architecture separating the client and server lo
 
 ### Using Docker (Recommended)
 
-1.  **Clone the repository:**
+1.  **Clone & Start:**
     ```bash
     git clone https://github.com/yourusername/messenger.git
     cd messenger
-    ```
-
-2.  **Start the application:**
-    ```bash
     docker-compose up -d --build
     ```
-    This will start the Database, Backend (on port 8000), and Frontend (on port 4200).
 
-3.  **Setup Backend:**
-    Access the backend container to run migrations:
+2.  **Setup Backend:**
     ```bash
     docker-compose exec backend composer install
     docker-compose exec backend php artisan migrate
     docker-compose exec backend php artisan jwt:secret
     ```
 
-4.  **Access the App:**
-    Open `http://localhost:4200` in your browser.
+### Manual Installation (Development)
 
-### Manual Installation
+#### 1. Backend Setup
+```bash
+cd backend
+composer install
+cp .env.example .env # Configure your DB
+php artisan key:generate
+php artisan migrate
+```
 
-#### Backend
-1.  Navigate to `backend/`.
-2.  Copy `.env.example` to `.env` and configure your Database.
-3.  Run `composer install`.
-4.  Run `php artisan key:generate`.
-5.  Run `php artisan migrate`.
-6.  Start server: `php artisan serve`.
+#### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+```
 
-#### Frontend
-1.  Navigate to `frontend/`.
-2.  Run `pnpm install`.
-3.  Start dev server: `pnpm start`.
+#### 3. Run Everything
+We've made development easier with a single command that starts both the API and WebSockets:
+```bash
+cd backend
+php artisan serve:all
+```
+Then, in another terminal:
+```bash
+cd frontend
+npm start
+```
 
-## Screenshots
+## 📸 Screenshots
 
 | Empty Chat State | Active Chat View |
 |-----------|-------------|
 | ![Chat](docs/imgs/Screenshot_20260106_001740.png) | ![Mobile](docs/imgs/Screenshot_20260106_001800.png) |
 
-## Development
+## 🚀 Recent Improvements (Jan 2026)
+-   ✅ **Transition to WebSockets**: Migrated from polling to **Laravel Reverb**.
+-   ✅ **Enterprise Logic**: Added `Attachments` and `Conversations` models for complex data structures.
+-   ✅ **UI Polishing**: Implemented custom scrollbars, auto-scroll logic, and fixed navigation artifacts.
+-   ✅ **DX Commands**: Added `php artisan serve:all` to orchestrate multi-server development.
+
+## 🛠️ Development Tools
 
 -   **Frontend-only**: `docker-compose -f docker-compose.frontend.yml up`
 -   **Backend-only**: `docker-compose -f docker-compose.backend.yml up`

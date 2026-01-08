@@ -1,0 +1,138 @@
+<div class="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8 bg-zinc-50 dark:bg-zinc-950 font-sans">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <!-- Logo -->
+    <div class="mx-auto h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+      </svg>
+    </div>
+    <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+      {{ isRegistering() ? 'Create your account' : 'Sign in to Nexus' }}
+    </h2>
+    <p class="mt-2 text-center text-sm text-zinc-500">
+      Enterprise team messaging
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white dark:bg-zinc-900 py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-zinc-200 dark:border-zinc-800">
+      <form class="space-y-5" (submit)="$event.preventDefault(); onSubmit()">
+        
+        <!-- Name field (register only) -->
+        @if (isRegistering()) {
+          <div>
+            <label for="name" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Full Name
+            </label>
+            <div class="mt-1">
+              <input 
+                id="name" 
+                name="name" 
+                type="text" 
+                required
+                autocomplete="name"
+                [ngModel]="name()" 
+                (ngModelChange)="name.set($event)"
+                class="block w-full appearance-none rounded-xl border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 px-4 py-3 placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:text-sm text-zinc-900 dark:text-zinc-100 transition-all"
+                placeholder="John Doe"
+              >
+            </div>
+          </div>
+        }
+
+        <!-- Email field -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Email address
+          </label>
+          <div class="mt-1">
+            <input 
+              id="email" 
+              name="email" 
+              type="email" 
+              autocomplete="email" 
+              required
+              [ngModel]="email()" 
+              (ngModelChange)="email.set($event)"
+              class="block w-full appearance-none rounded-xl border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 px-4 py-3 placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:text-sm text-zinc-900 dark:text-zinc-100 transition-all"
+              placeholder="you@company.com"
+            >
+          </div>
+        </div>
+
+        <!-- Password field -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Password
+          </label>
+          <div class="mt-1">
+            <input 
+              id="password" 
+              name="password" 
+              type="password" 
+              autocomplete="current-password" 
+              required
+              [ngModel]="password()" 
+              (ngModelChange)="password.set($event)"
+              class="block w-full appearance-none rounded-xl border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 px-4 py-3 placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:text-sm text-zinc-900 dark:text-zinc-100 transition-all"
+              placeholder="••••••••"
+            >
+          </div>
+        </div>
+
+        <!-- Error message -->
+        @if (error()) {
+          <div class="rounded-xl bg-red-50 dark:bg-red-900/20 p-4 border border-red-200 dark:border-red-800">
+            <div class="flex items-center">
+              <svg class="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+              <span class="text-sm font-medium text-red-800 dark:text-red-200">{{ error() }}</span>
+            </div>
+          </div>
+        }
+
+        <!-- Submit button -->
+        <div>
+          <button 
+            type="submit" 
+            [disabled]="isLoading()"
+            class="flex w-full justify-center rounded-xl border border-transparent bg-indigo-600 py-3 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            @if (isLoading()) {
+              <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            } @else {
+              {{ isRegistering() ? 'Create Account' : 'Sign In' }}
+            }
+          </button>
+        </div>
+      </form>
+
+      <!-- Toggle mode -->
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-zinc-300 dark:border-zinc-700"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="bg-white dark:bg-zinc-900 px-2 text-zinc-500">Or</span>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <button 
+            type="button" 
+            (click)="toggleMode()"
+            class="inline-flex w-full justify-center rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+          >
+            {{ isRegistering() ? 'Already have an account? Sign in' : 'Create new account' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,116 @@
+<aside class="flex flex-col w-full md:w-80 flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden transition-all duration-300">
+  
+  <!-- Header -->
+  <div class="h-16 flex items-center justify-between px-4 border-b border-zinc-100 dark:border-zinc-800/50 flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <img src="assets/nexus-logo.png" alt="Nexus" class="w-8 h-8 object-contain" onerror="this.style.display='none'">
+      </div>
+      <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+        Nexus
+      </h1>
+    </div>
+    <div class="flex items-center gap-1">
+      <!-- Create Group -->
+      <button 
+        (click)="createGroupClicked.emit()" 
+        class="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-indigo-600 transition-colors" 
+        title="Create Group">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+        </svg>
+      </button>
+      <!-- Logout -->
+      <button 
+        (click)="logoutClicked.emit()" 
+        class="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors" 
+        title="Logout">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="p-4 flex-shrink-0">
+    <div class="relative">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+      <input 
+        type="text" 
+        placeholder="Search people..." 
+        [ngModel]="searchQuery"
+        (ngModelChange)="searchChanged.emit($event)"
+        (keydown.enter)="searchSubmitted.emit()"
+        class="w-full bg-zinc-100 dark:bg-zinc-800/50 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 placeholder-zinc-400 text-zinc-700 dark:text-zinc-200" 
+      />
+    </div>
+  </div>
+
+  <!-- Conversation List -->
+  <div class="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+    @if (conversations.length === 0) {
+      <div class="p-4 text-center text-zinc-500 text-sm mt-10">
+        {{ isSearching ? 'No users found.' : 'No conversations yet.' }}
+      </div>
+    }
+
+    @for (conv of conversations; track conv.id) {
+      <button 
+        (click)="conversationSelected.emit(conv.id)"
+        class="w-full p-3 rounded-xl flex items-center gap-3 transition-all duration-200 group text-left relative"
+        [class.bg-indigo-50]="selectedId === conv.id"
+        [class.dark:bg-indigo-500/10]="selectedId === conv.id"
+        [class.shadow-sm]="selectedId === conv.id"
+        [class.hover:bg-zinc-100]="selectedId !== conv.id"
+        [class.dark:hover:bg-zinc-800/50]="selectedId !== conv.id">
+        
+        <app-avatar
+          [src]="conv.user.avatar"
+          [name]="conv.user.name"
+          [status]="conv.isGroup ? null : conv.user.status"
+          [isGroup]="conv.isGroup"
+          [participantCount]="conv.participantCount"
+          [size]="48">
+        </app-avatar>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-0.5">
+            <span 
+              class="font-medium text-sm truncate"
+              [class.text-indigo-600]="selectedId === conv.id"
+              [class.dark:text-indigo-400]="selectedId === conv.id"
+              [class.text-zinc-900]="selectedId !== conv.id"
+              [class.dark:text-zinc-100]="selectedId !== conv.id">
+              {{ conv.user.name }}
+            </span>
+            <span class="text-xs text-zinc-400 whitespace-nowrap">
+              {{ conv.lastMessage.timestamp | date:'shortTime' }}
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <p 
+              class="text-xs truncate leading-relaxed max-w-[85%]"
+              [class.font-medium]="!conv.lastMessage.isRead"
+              [class.text-zinc-800]="!conv.lastMessage.isRead"
+              [class.dark:text-zinc-200]="!conv.lastMessage.isRead"
+              [class.text-zinc-500]="conv.lastMessage.isRead"
+              [class.dark:text-zinc-400]="conv.lastMessage.isRead">
+              @if (conv.lastMessage.senderId === 'me') {
+                <span class="mr-1">You:</span>
+              }
+              {{ conv.lastMessage.text }}
+            </p>
+            @if (conv.unreadCount > 0) {
+              <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shadow-lg shadow-indigo-500/30">
+                {{ conv.unreadCount }}
+              </span>
+            }
+          </div>
+        </div>
+      </button>
+    }
+  </div>
+</aside>
