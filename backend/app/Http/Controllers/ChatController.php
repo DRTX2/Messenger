@@ -62,8 +62,9 @@ class ChatController extends Controller
         $message = $this->chatService->sendMessage(
             (int) auth()->id(),
             $user->id,
-            (string) $request->validated('message', ''), // Default to empty string if null
-            $request->validated('attachment_ids', [])
+            (string) $request->validated('message', ''),
+            $request->validated('attachment_ids', []),
+            (string) $request->validated('request_id')
         );
 
         return response()->json([
@@ -104,6 +105,8 @@ class ChatController extends Controller
      */
     public function toggleFavorite(Request $request, Message $message): JsonResponse
     {
+        $this->authorize('favorite', $message);
+
         $updatedMessage = $this->chatService->toggleFavorite($message->id, (int) auth()->id());
         
         return response()->json([
@@ -118,6 +121,8 @@ class ChatController extends Controller
      */
     public function deleteMessage(Message $message): JsonResponse
     {
+        $this->authorize('delete', $message);
+
         $this->chatService->deleteMessage($message->id, (int) auth()->id());
             
         return response()->json([

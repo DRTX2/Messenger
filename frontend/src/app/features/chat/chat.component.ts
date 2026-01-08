@@ -10,6 +10,7 @@ import {
   UIMessage, 
   Attachment 
 } from '../../shared/models';
+import { generateUUID } from '../../shared/utils/uuid';
 
 import {
   SidebarComponent,
@@ -181,8 +182,9 @@ export class ChatComponent {
 
     this.isSending.set(true);
     const attachmentIds = attachments.map(a => a.id);
+    const requestId = generateUUID();
 
-    this.chatService.sendMessage(conv.user.id, text, attachmentIds).subscribe({
+    this.chatService.sendMessage(conv.user.id, text, attachmentIds, requestId).subscribe({
       next: (res) => {
         this.isSending.set(false);
         this.messageText.set('');
@@ -190,7 +192,10 @@ export class ChatComponent {
 
         if (res.success && res.data) {
           const mapped = this.mapMessage(res.data);
-          this.currentMessages.update(msgs => [...msgs, mapped]);
+          // Check if message already exists (idempotency check in UI too for strictness)
+          if (!this.currentMessages().find(m => m.id === mapped.id)) {
+            this.currentMessages.update(msgs => [...msgs, mapped]);
+          }
         }
 
         if (convId < 0) {
@@ -384,7 +389,7 @@ export class ChatComponent {
         id: otherUser?.id || 0,
         name: displayName || 'Unknown',
         avatar: displayAvatar,
-        status: 'offline'
+        status: otherUser?.is_online ? 'online' : 'offline'
       },
       lastMessage: {
         text: c.latest_message?.content || 'No messages yet',
@@ -405,7 +410,7 @@ export class ChatComponent {
         id: u.id,
         name: u.name,
         avatar: `https://ui-avatars.com/api/?name=${u.name}&background=random`,
-        status: 'offline'
+        status: u.is_online ? 'online' : 'offline'
       },
       lastMessage: {
         text: 'Tap to start chatting',

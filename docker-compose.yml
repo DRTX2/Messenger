@@ -14,8 +14,13 @@ services:
       - DB_DATABASE=messenger
       - DB_USERNAME=root
       - DB_PASSWORD=root
+      - REDIS_HOST=redis
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - BROADCAST_CONNECTION=reverb
     depends_on:
       - db
+      - redis
     networks:
       - messenger-network
 
@@ -41,9 +46,19 @@ services:
     networks:
       - messenger-network
 
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - messenger-redis-data:/data
+    networks:
+      - messenger-network
+
 networks:
   messenger-network:
     driver: bridge
 
 volumes:
   messenger-db-data:
+  messenger-redis-data:

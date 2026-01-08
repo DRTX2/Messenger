@@ -16,6 +16,7 @@ class CreateGroupRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'request_id' => ['required', 'string', 'uuid'],
             'name' => ['required', 'string', 'min:2', 'max:100'],
             'participant_ids' => ['required', 'array', 'min:1'],
             'participant_ids.*' => ['required', 'integer', 'exists:users,id'],

@@ -28,7 +28,8 @@ class GroupController extends Controller
             creatorId: $user->id,
             name: $request->validated('name'),
             participantIds: $request->validated('participant_ids'),
-            avatarUrl: $request->validated('avatar_url')
+            avatarUrl: $request->validated('avatar_url'),
+            requestId: $request->validated('request_id')
         );
 
         return response()->json([
@@ -43,16 +44,16 @@ class GroupController extends Controller
      */
     public function addParticipants(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->authorize('addParticipants', $conversation);
+
         $request->validate([
             'user_ids' => ['required', 'array', 'min:1'],
             'user_ids.*' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $user = auth()->user();
-
         $this->groupService->addParticipants(
             conversation: $conversation,
-            requesterId: $user->id,
+            requesterId: (int) auth()->id(),
             userIds: $request->input('user_ids')
         );
 
@@ -68,11 +69,11 @@ class GroupController extends Controller
      */
     public function removeParticipant(Request $request, Conversation $conversation, int $userId): JsonResponse
     {
-        $user = auth()->user();
+        $this->authorize('removeParticipant', $conversation);
 
         $this->groupService->removeParticipant(
             conversation: $conversation,
-            requesterId: $user->id,
+            requesterId: (int) auth()->id(),
             userIdToRemove: $userId
         );
 
@@ -87,11 +88,11 @@ class GroupController extends Controller
      */
     public function leave(Conversation $conversation): JsonResponse
     {
-        $user = auth()->user();
+        $this->authorize('leave', $conversation);
 
         $this->groupService->leaveGroup(
             conversation: $conversation,
-            userId: $user->id
+            userId: (int) auth()->id()
         );
 
         return response()->json([
@@ -105,16 +106,16 @@ class GroupController extends Controller
      */
     public function update(Request $request, Conversation $conversation): JsonResponse
     {
+        $this->authorize('update', $conversation);
+
         $request->validate([
             'name' => ['sometimes', 'string', 'min:2', 'max:100'],
             'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500'],
         ]);
 
-        $user = auth()->user();
-
         $this->groupService->updateGroup(
             conversation: $conversation,
-            requesterId: $user->id,
+            requesterId: (int) auth()->id(),
             name: $request->input('name'),
             avatarUrl: $request->input('avatar_url')
         );

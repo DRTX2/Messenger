@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../../core/services';
 import { User } from '../../../shared/models';
+import { generateUUID } from '../../../shared/utils/uuid';
 
 @Component({
   selector: 'app-create-group-modal',
@@ -63,8 +64,9 @@ export class CreateGroupModalComponent {
 
     this.isCreating.set(true);
     const userIds = this.selectedUsers().map(u => u.id);
+    const requestId = generateUUID();
 
-    this.chatService.createGroup(this.groupName(), userIds).subscribe({
+    this.chatService.createGroup(this.groupName(), userIds, undefined, requestId).subscribe({
       next: () => {
         this.isCreating.set(false);
         this.groupCreated.emit();

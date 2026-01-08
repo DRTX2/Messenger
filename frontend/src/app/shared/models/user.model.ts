@@ -5,6 +5,7 @@ export interface User {
   email: string;
   avatar?: string;
   unread_messages?: number;
+  is_online?: boolean;
   status?: 'online' | 'offline' | 'away';
   created_at?: string;
 }

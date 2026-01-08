@@ -11,11 +11,17 @@ class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        /** @var \App\Services\PresenceService $presenceService */
+        $presenceService = app(\App\Services\PresenceService::class);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'unread_messages' => $this->unread_messages ?? 0,
+            'is_online' => $presenceService->isOnline((int) $this->id),
+            'unread_messages' => ((int)auth()->id() === (int)$this->id) 
+                ? app(\App\Services\ChatService::class)->getUnreadCount((int)$this->id)
+                : 0,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

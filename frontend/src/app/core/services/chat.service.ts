@@ -60,12 +60,14 @@ export class ChatService {
   sendMessage(
     userId: number, 
     message: string, 
-    attachmentIds: number[] = []
+    attachmentIds: number[] = [],
+    requestId?: string
   ): Observable<ApiResponse<Message>> {
     this.isSending.set(true);
     return this.http.post<ApiResponse<Message>>(`${this.apiUrl}/chat/${userId}`, {
       message,
-      attachment_ids: attachmentIds
+      attachment_ids: attachmentIds,
+      request_id: requestId
     });
   }
 
@@ -117,12 +119,14 @@ export class ChatService {
   createGroup(
     name: string, 
     participantIds: number[], 
-    avatarUrl?: string
+    avatarUrl?: string,
+    requestId?: string
   ): Observable<ApiResponse<Conversation>> {
     return this.http.post<ApiResponse<Conversation>>(`${this.apiUrl}/groups`, {
       name,
       participant_ids: participantIds,
-      avatar_url: avatarUrl
+      avatar_url: avatarUrl,
+      request_id: requestId
     });
   }
 

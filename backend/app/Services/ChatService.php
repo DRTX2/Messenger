@@ -15,6 +15,10 @@ use Illuminate\Support\Str;
 
 class ChatService
 {
+    public function __construct(
+        private readonly PresenceService $presenceService
+    ) {}
+
     /**
      * Get user's inbox (list of conversations)
      * This mimics WhatsApp/Messenger home screen
@@ -81,12 +85,8 @@ class ChatService
      */
     public function getConversationMessages(int $userId, Conversation $conversation, int $perPage = 50): LengthAwarePaginator
     {
-        // Security check: Is user part of this conversation?
-        $isParticipant = $conversation->participants()->where('user_id', $userId)->exists();
-        
-        if (! $isParticipant) {
-            throw new BusinessException('You are not a participant in this conversation.', 403);
-        }
+        // Security check via Policy
+        \Illuminate\Support\Facades\Gate::authorize('view', $conversation);
 
         return $conversation->messages()
             ->with(['sender:id,name,email', 'attachments', 'parent'])
@@ -121,8 +121,62 @@ class ChatService
 
             $message->load(['sender', 'conversation', 'attachments']);
             
-            // 5. Broadcast Real-time Event
-            \App\Events\MessageSent::dispatch($message);
+            // SIDE EFFECTS (MOVE OUT OF ATOMIC DB TRANSACTION FOR EVENTUAL CONSISTENCY)
+            DB::afterCommit(function () use ($message, $attachmentIds, $senderId, $conversation) {
+                // 5. Broadcast Real-time Event
+                \App\Events\MessageSent::dispatch($message);
+
+                // 6. Increment cache for all other participants
+                $conversation->participants()
+                    ->where('user_id', '!=', $senderId)
+                    ->pluck('user_id')
+                    ->each(fn($id) => $this->presenceService->incrementUnreadCount((int) $id));
+
+                // 7. Dispatch background job for heavy processing if attachments exist
+                if (!empty($attachmentIds)) {
+                    \App\Jobs\ProcessMessageAttachments::dispatch($message);
+                }
+            });
+
+            return $message;
+        });
+    }
+
+    /**
+     * Send a message to a specific conversation (Unified method)
+     */
+    public function sendMessageToConversation(int $senderId, Conversation $conversation, string $content, array $attachmentIds = []): Message
+    {
+        \Illuminate\Support\Facades\Gate::authorize('message', $conversation);
+
+        return DB::transaction(function () use ($conversation, $senderId, $content, $attachmentIds) {
+            $message = $conversation->messages()->create([
+                'sender_id' => $senderId,
+                'content' => $content,
+                'type' => empty($attachmentIds) ? 'text' : 'file',
+            ]);
+
+            if (!empty($attachmentIds)) {
+                (new AttachmentService())->linkAttachmentsToMessage($message->id, $attachmentIds);
+            }
+
+            $conversation->update(['last_message_at' => now()]);
+            $message->load(['sender', 'conversation', 'attachments']);
+            
+            DB::afterCommit(function () use ($message, $attachmentIds, $senderId, $conversation) {
+                \App\Events\MessageSent::dispatch($message);
+
+                // Increment unread cache for all except sender
+                $conversation->participants()
+                    ->where('user_id', '!=', $senderId)
+                    ->pluck('user_id')
+                    ->each(fn($id) => $this->presenceService->incrementUnreadCount((int) $id));
+
+                // Background processing
+                if (!empty($attachmentIds)) {
+                    \App\Jobs\ProcessMessageAttachments::dispatch($message);
+                }
+            });
 
             return $message;
         });
@@ -138,15 +192,31 @@ class ChatService
             ->where('user_id', $userId)
             ->update(['formatted_last_read_at' => now()]);
         
-        // Also update specific messages if needed, though conversation-level read receipt is often enough for lists
+        // Invalidate cache
+        $this->presenceService->clearUnreadCache($userId);
     }
     
     // --- Legacy Adapter Methods (keeping signatures valid for ChatController if possible) ---
 
     // Note: Adjusted signature to match new controller usage
-    public function sendMessage(int $senderId, int $receiverId, string $content, array $attachments = []): Message
+    public function sendMessage(int $senderId, int $receiverId, string $content, array $attachments = [], ?string $requestId = null): Message
     {
-       return $this->sendMessageToUser($senderId, $receiverId, $content, $attachments);
+       if ($requestId) {
+           $cacheKey = "msg_request_{$requestId}";
+           // Semi-senior: We store the ID of the created message to return the same object if retried
+           $existingMessageId = \Illuminate\Support\Facades\Cache::get($cacheKey);
+           if ($existingMessageId) {
+               return Message::findOrFail($existingMessageId);
+           }
+       }
+
+       $message = $this->sendMessageToUser($senderId, $receiverId, $content, $attachments);
+
+       if ($requestId) {
+           \Illuminate\Support\Facades\Cache::put("msg_request_{$requestId}", $message->id, now()->addHours(24));
+       }
+
+       return $message;
     }
 
     public function getUsers(int $userId, int $perPage = 10, ?string $search = null): LengthAwarePaginator
@@ -170,32 +240,56 @@ class ChatService
 
     public function getUnreadCount(int $userId): int
     {
-        // Count conversations where last_message_at > formatted_last_read_at
-        // deeper query needed, assuming simplistic approach for now
-        return 0; // TODO: Implement robust unread count
+        return $this->presenceService->getUnreadCount($userId, function () use ($userId) {
+            // Count messages in all user conversations that were sent after user's last_read_at
+            return Message::query()
+                ->where('sender_id', '!=', $userId)
+                ->whereIn('conversation_id', function ($query) use ($userId) {
+                    $query->select('conversation_id')
+                        ->from('conversation_participants')
+                        ->where('user_id', $userId);
+                })
+                ->whereExists(function ($query) use ($userId) {
+                    $query->select(DB::raw(1))
+                        ->from('conversation_participants')
+                        ->whereColumn('conversation_participants.conversation_id', 'messages.conversation_id')
+                        ->where('conversation_participants.user_id', $userId)
+                        ->where(function ($q) {
+                            $q->whereNull('formatted_last_read_at')
+                                ->orWhereColumn('messages.created_at', '>', 'formatted_last_read_at');
+                        });
+                })
+                ->count();
+        });
     }
     
     public function deleteMessage(int $messageId, int $userId): bool
     {
-        $message = Message::find($messageId);
-        if (!$message || $message->sender_id !== $userId) {
-            return false;
-        }
+        $message = Message::findOrFail($messageId);
+        
+        // Authorization via MessagePolicy
+        \Illuminate\Support\Facades\Gate::authorize('delete', $message);
+
         return (bool) $message->delete();
     }
 
     public function clearConversation(int $authUserId, int $otherUserId): bool
     {
         $conversation = $this->getPrivateConversation($authUserId, $otherUserId);
-        // Only clear for ME? Or delete all?
-        // Usually "Clear Chat" means "Delete for Me".
-        // For now, let's keep the old aggressive behavior but scoped to the conversation.
+        
+        // Authorization via ConversationPolicy
+        \Illuminate\Support\Facades\Gate::authorize('clear', $conversation);
+
         return (bool) $conversation->messages()->delete(); 
     }
 
     public function toggleFavorite(int $messageId, int $userId): Message
     {
         $message = Message::findOrFail($messageId);
+
+        // Authorization via MessagePolicy
+        \Illuminate\Support\Facades\Gate::authorize('favorite', $message);
+
         $message->is_favorite = !$message->is_favorite;
         $message->save();
         return $message;
