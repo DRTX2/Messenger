@@ -18,8 +18,17 @@ class GroupService
         int $creatorId,
         string $name,
         array $participantIds,
-        ?string $avatarUrl = null
+        ?string $avatarUrl = null,
+        ?string $requestId = null
     ): Conversation {
+        if ($requestId) {
+            $cacheKey = "group_request_{$requestId}";
+            $existingGroupId = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($existingGroupId) {
+                return Conversation::findOrFail($existingGroupId);
+            }
+        }
+
         // Ensure creator is not in the participant list (we'll add them separately as admin)
         $participantIds = array_filter($participantIds, fn($id) => $id !== $creatorId);
 
@@ -47,6 +56,10 @@ class GroupService
             ]);
         }
 
+        if ($requestId) {
+            \Illuminate\Support\Facades\Cache::put("group_request_{$requestId}", $conversation->id, now()->addHours(24));
+        }
+
         return $conversation;
     }
 
@@ -59,7 +72,7 @@ class GroupService
         array $userIds
     ): void {
         $this->ensureIsGroup($conversation);
-        $this->ensureIsAdmin($conversation, $requesterId);
+        \Illuminate\Support\Facades\Gate::authorize('addParticipants', $conversation);
 
         $existingIds = $conversation->participants()->pluck('users.id')->toArray();
 
@@ -82,7 +95,7 @@ class GroupService
         int $userIdToRemove
     ): void {
         $this->ensureIsGroup($conversation);
-        $this->ensureIsAdmin($conversation, $requesterId);
+        \Illuminate\Support\Facades\Gate::authorize('removeParticipant', $conversation);
 
         if ($requesterId === $userIdToRemove) {
             throw new BusinessException('Use the leave endpoint to remove yourself.', 400);
@@ -97,7 +110,7 @@ class GroupService
     public function leaveGroup(Conversation $conversation, int $userId): void
     {
         $this->ensureIsGroup($conversation);
-        $this->ensureIsParticipant($conversation, $userId);
+        \Illuminate\Support\Facades\Gate::authorize('leave', $conversation);
 
         $conversation->participants()->detach($userId);
 
@@ -117,7 +130,7 @@ class GroupService
         ?string $avatarUrl = null
     ): Conversation {
         $this->ensureIsGroup($conversation);
-        $this->ensureIsAdmin($conversation, $requesterId);
+        \Illuminate\Support\Facades\Gate::authorize('update', $conversation);
 
         if ($name !== null) {
             $conversation->name = $name;
@@ -138,24 +151,6 @@ class GroupService
     {
         if (!$conversation->is_group) {
             throw new BusinessException('This operation is only allowed for group conversations.', 400);
-        }
-    }
-
-    private function ensureIsAdmin(Conversation $conversation, int $userId): void
-    {
-        $participant = $conversation->participants()->where('user_id', $userId)->first();
-
-        if (!$participant || !$participant->pivot->is_admin) {
-            throw new BusinessException('Only group admins can perform this action.', 403);
-        }
-    }
-
-    private function ensureIsParticipant(Conversation $conversation, int $userId): void
-    {
-        $isParticipant = $conversation->participants()->where('user_id', $userId)->exists();
-
-        if (!$isParticipant) {
-            throw new BusinessException('You are not a participant in this group.', 403);
         }
     }
 }
